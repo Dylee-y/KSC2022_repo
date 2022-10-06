@@ -81,8 +81,8 @@ def main():
     model = torch.nn.DataParallel(model, device_ids=list(range(args.ngpu)))
     #model = torch.nn.DataParallel(model).cuda()
     model = model.cuda()
-    print ("model")
-    print (model)
+    print ("model is in line 85")
+    # print (model)
 
     # get the number of model parameters
     print('Number of model parameters: {}'.format(
@@ -116,7 +116,7 @@ def main():
     # pdb.set_trace()
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose([
-                transforms.Scale(256),
+                transforms.Resize(256),
                 transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 normalize,
@@ -177,8 +177,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
     for i, (input, target) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
-        
-        target = target.cuda(async=True)
+        # target = target.cuda(async=True)
+        target = target.cuda(non_blocking=True)
         input_var = torch.autograd.Variable(input)
         target_var = torch.autograd.Variable(target)
         
@@ -222,7 +222,8 @@ def validate(val_loader, model, criterion, epoch):
 
     end = time.time()
     for i, (input, target) in enumerate(val_loader):
-        target = target.cuda(async=True)
+        # target = target.cuda(async=True)
+        target = target.cuda(non_blocking=True)
         input_var = torch.autograd.Variable(input, volatile=True)
         target_var = torch.autograd.Variable(target, volatile=True)
         
