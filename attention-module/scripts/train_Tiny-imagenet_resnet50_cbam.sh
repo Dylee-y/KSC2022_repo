@@ -3,7 +3,7 @@ python ../train_imagenet.py \
 			--workers 8 \
 			--arch resnet --depth 50 \
 			--epochs 80 \
-			--batch-size 256 --lr 0.1 \
+			--batch-size 64 --lr 0.1 \
 			--att-type CBAM \
 			--net-type Tiny-ImageNet \
 			--prefix RESNET18_TINYIMAGENET_CBAM \

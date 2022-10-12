@@ -193,7 +193,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
         
         # measure accuracy and record loss
         prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-        losses.update(loss.data[0], input.size(0))
+        # losses.update(loss.data[0], input.size(0))
+        losses.update(loss.data, input.size(0))
         top1.update(prec1[0], input.size(0))
         top5.update(prec5[0], input.size(0))
         
@@ -303,9 +304,11 @@ def accuracy(output, target, topk=(1,)):
     correct = pred.eq(target.view(1, -1).expand_as(pred))
 
     res = []
+    # print(correct[1])
+    # print(len(correct[0]))
     for k in topk:
-        print(correct[:k])
-        correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+        # print(correct[:k])
+        correct_k = torch.reshape(correct[:k],(-1,)).float().sum(0, keepdim=True)
         # correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
