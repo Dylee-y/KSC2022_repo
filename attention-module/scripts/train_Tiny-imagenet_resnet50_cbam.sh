@@ -4,6 +4,7 @@ python ../train_imagenet.py \
 			--arch resnet --depth 50 \
 			--epochs 40 \
 			--batch-size 64 --lr 0.1 \
+			--resume ./scripts/checkpoints/ \
 			--att-type CBAM \
 			--net-type Tiny-ImageNet \
 			--prefix RESNET50_TINYIMAGENET_CBAM \
