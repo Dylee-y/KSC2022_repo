@@ -40,6 +40,7 @@ class BasicBlock(nn.Module):
         out = self.bn2(out)
 
         if self.downsample is not None:
+            print(self.downsample)
             residual = self.downsample(x)
 
         if not self.cbam is None:
@@ -56,6 +57,7 @@ class Bottleneck(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None, use_cbam=False):
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
+        # inplanes = input channel number, planes = output channel number
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
                                padding=1, bias=False)
@@ -124,7 +126,8 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2, att_type=att_type)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2, att_type=att_type)
 
-        self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.fc = nn.Linear(2048 * block.expansion, num_classes)
+        # self.fc = nn.Linear(512 * block.expansion, num_classes)
 
         init.kaiming_normal_(self.fc.weight)
         for key in self.state_dict():
@@ -187,7 +190,7 @@ class ResNet(nn.Module):
 
 def ResidualNet(network_type, depth, num_classes, att_type):
 
-    assert network_type in ["ImageNet", "CIFAR10", "CIFAR100"], "network type should be ImageNet or CIFAR10 / CIFAR100"
+    assert network_type in ["ImageNet", "CIFAR10", "CIFAR100", "Tiny-ImageNet"], "network type should be ImageNet or CIFAR10 / CIFAR100 /Tiny-ImageNet"
     assert depth in [18, 34, 50, 101], 'network depth should be 18, 34, 50 or 101'
 
     if depth == 18:

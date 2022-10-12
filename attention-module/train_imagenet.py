@@ -53,6 +53,7 @@ parser.add_argument("--seed", type=int, default=1234, metavar='BS', help='input 
 parser.add_argument("--prefix", type=str, required=True, metavar='PFX', help='prefix for logging & checkpoint saving')
 parser.add_argument('--evaluate', dest='evaluate', action='store_true', help='evaluation only')
 parser.add_argument('--att-type', type=str, choices=['BAM', 'CBAM'], default=None)
+parser.add_argument('--net-type', type=str, choices=["ImageNet", "CIFAR10", "CIFAR100","Tiny-ImageNet"], default=None)
 best_prec1 = 0
 
 if not os.path.exists('./checkpoints'):
@@ -70,7 +71,10 @@ def main():
 
     # create model
     if args.arch == "resnet":
-        model = ResidualNet( 'ImageNet', args.depth, 1000, args.att_type )
+        model = ResidualNet( args.net_type, args.depth, 200, args.att_type)
+        # model = ResidualNet( 'ImageNet', args.depth, 1000, args.att_type )
+        # assert network_type in ["ImageNet", "CIFAR10", "CIFAR100"], 
+        # "network type should be ImageNet or CIFAR10 / CIFAR100"
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
@@ -116,8 +120,8 @@ def main():
     # pdb.set_trace()
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose([
-                transforms.Resize(256),
-                transforms.CenterCrop(224),
+                # transforms.Resize(64),
+                # transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 normalize,
                 ])),
@@ -130,7 +134,8 @@ def main():
     train_dataset = datasets.ImageFolder(
         traindir,
         transforms.Compose([
-            transforms.RandomSizedCrop(size0),
+            # transforms.RandomResizedCrop(64),
+            # transforms.RandomResizedCrop(size0),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
@@ -299,7 +304,9 @@ def accuracy(output, target, topk=(1,)):
 
     res = []
     for k in topk:
+        print(correct[:k])
         correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+        # correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
         res.append(correct_k.mul_(100.0 / batch_size))
     return res
 
