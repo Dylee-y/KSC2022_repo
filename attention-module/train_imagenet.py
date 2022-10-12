@@ -1,4 +1,5 @@
 import argparse
+from functools import total_ordering
 import os
 import shutil
 import time
@@ -15,6 +16,14 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 from MODELS.model_resnet import *
 from PIL import ImageFile
+from datetime import datetime
+from torch.utils.tensorboard import SummaryWriter
+logdir = '../../tensorlogs/scalars/' + 'RESNET50_TINYIMAGENET_CBAM_epch40'+ datetime.now().strftime("%Y%m%d-%H%M%S")
+writer = SummaryWriter(logdir)
+
+global totaltime
+totaltime = 0.
+
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
@@ -72,6 +81,7 @@ def main():
     # create model
     if args.arch == "resnet":
         model = ResidualNet( args.net_type, args.depth, 200, args.att_type)
+        # 3rd argument has to be class number
         # model = ResidualNet( 'ImageNet', args.depth, 1000, args.att_type )
         # assert network_type in ["ImageNet", "CIFAR10", "CIFAR100"], 
         # "network type should be ImageNet or CIFAR10 / CIFAR100"
@@ -177,9 +187,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
     # switch to train mode
     model.train()
-
+    totaltime_test = 0.
     end = time.time()
     for i, (input, target) in enumerate(train_loader):
+        # print(input[0][0][0])
         # measure data loading time
         data_time.update(time.time() - end)
         # target = target.cuda(async=True)
@@ -205,17 +216,26 @@ def train(train_loader, model, criterion, optimizer, epoch):
         
         # measure elapsed time
         batch_time.update(time.time() - end)
+        # print(batch_time)
         end = time.time()
-        
+        totaltime_test += batch_time.val/60
         if i % args.print_freq == 0:
-            print('Epoch: [{0}][{1}/{2}]\t'
+            print('_Epoch: [{0}][{1}/{2}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                   'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
-                  'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
+                  'Prec@5 {top5.val:.3f} ({top5.avg:.3f})\t'
+                  'totaltime(min) {totaltime:.3f}'.format(
                    epoch, i, len(train_loader), batch_time=batch_time,
-                   data_time=data_time, loss=losses, top1=top1, top5=top5))
+                   data_time=data_time, loss=losses, top1=top1, top5=top5, totaltime=totaltime_test))
+            writer.add_scalar('training loss/iteration', losses.val, epoch * len(train_loader) + i)
+            writer.add_scalar('training loss/avg', losses.avg, epoch * len(train_loader) + i)
+            writer.add_scalar('acc_per_iteration/top1Precval', top1.val, epoch * len(train_loader) + i)
+            writer.add_scalar('acc_per_iteration/top5Precval', top5.val, epoch * len(train_loader) + i)
+            writer.add_scalar('avg_acc/top1Precval', top1.avg, epoch * len(train_loader) + i)
+            writer.add_scalar('avg_acc/top5Precval', top5.avg, epoch * len(train_loader) + i)
+            writer.add_scalar('time(min)/iteration', totaltime_test, epoch * len(train_loader) + i)
 
 def validate(val_loader, model, criterion, epoch):
     batch_time = AverageMeter()
@@ -227,11 +247,21 @@ def validate(val_loader, model, criterion, epoch):
     model.eval()
 
     end = time.time()
+    totaltime_val = 0.
     for i, (input, target) in enumerate(val_loader):
         # target = target.cuda(async=True)
         target = target.cuda(non_blocking=True)
-        input_var = torch.autograd.Variable(input, volatile=True)
-        target_var = torch.autograd.Variable(target, volatile=True)
+        # oneinput = input[0][0][0].view(-1)
+        # print(type(oneinput[0]))
+        # print(target[0])
+        # original code of this part
+        # input_var = torch.autograd.Variable(input)
+        # target_var = torch.autograd.Variable(target)
+        
+        with torch.no_grad():
+            input_var = input.clone().detach().requires_grad_(True)
+            # torch.tensor(input,requires_grad=True)
+            target_var = torch.autograd.Variable(target, volatile = True)
         
         # compute output
         output = model(input_var)
@@ -239,22 +269,33 @@ def validate(val_loader, model, criterion, epoch):
         
         # measure accuracy and record loss
         prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
-        losses.update(loss.data[0], input.size(0))
+        losses.update(loss.data, input.size(0))
+        # losses.update(loss.data[0], input.size(0))
         top1.update(prec1[0], input.size(0))
         top5.update(prec5[0], input.size(0))
         
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
-        
+        totaltime_val = batch_time.val /60
         if i % args.print_freq == 0:
             print('Test: [{0}/{1}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
                   'Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t'
-                  'Prec@5 {top5.val:.3f} ({top5.avg:.3f})'.format(
+                  'Prec@5 {top5.val:.3f} ({top5.avg:.3f})\t'
+                  'totaltime(min) {totaltime:.3f}'.format(
                    i, len(val_loader), batch_time=batch_time, loss=losses,
-                   top1=top1, top5=top5))
+                   top1=top1, top5=top5, totaltime = totaltime_val))
+            writer.add_scalar('evaluation loss/iteration', losses.val, epoch * len(val_loader) + i)
+            writer.add_scalar('avg evaluation loss', losses.avg, epoch * len(val_loader) + i)
+            writer.add_scalar('val: top1Precval', top1.val, epoch * len(val_loader) + i)
+            writer.add_scalar('val: top5Precval', top5.val, epoch * len(val_loader) + i)
+            writer.add_scalar('val: top1Precval avg', top1.avg, epoch * len(val_loader) + i)
+            writer.add_scalar('val: top5Precval avg', top5.avg, epoch * len(val_loader) + i)
+            writer.add_scalar('time(min)/iteration', totaltime_val, epoch * len(val_loader) + i)
+            
+        
     
     print(' * Prec@1 {top1.avg:.3f} Prec@5 {top5.avg:.3f}'
             .format(top1=top1, top5=top5))
@@ -316,3 +357,4 @@ def accuracy(output, target, topk=(1,)):
 
 if __name__ == '__main__':
     main()
+writer.close()
