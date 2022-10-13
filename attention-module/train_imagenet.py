@@ -19,7 +19,7 @@ from MODELS.model_resnet import *
 from PIL import ImageFile
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
-logdir = '../../tensorlogs/scalars/' + 'RESNET50_TINYIMAGENET_CBAM_epch40'+ datetime.now().strftime("%Y%m%d-%H%M%S")
+logdir = '../../tensorlogs/scalars/' + 'RESNET50_CUB_CBAM_epch60'+ datetime.now().strftime("%Y%m%d-%H%M%S")
 writer = SummaryWriter(logdir)
 
 ttime_val = 0.
@@ -131,8 +131,8 @@ def main():
     # pdb.set_trace()
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose([
-                # transforms.Resize(64),
-                # transforms.CenterCrop(224),
+                transforms.Resize(224),
+                transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 normalize,
                 ])),
@@ -145,8 +145,9 @@ def main():
     train_dataset = datasets.ImageFolder(
         traindir,
         transforms.Compose([
-            # transforms.RandomResizedCrop(64),
-            # transforms.RandomResizedCrop(size0),
+            transforms.Resize(224),
+            transforms.RandomResizedCrop(224),
+            # transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
