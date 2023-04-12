@@ -2,3 +2,4 @@ attention-module/MODELS/__pycache__/
 attention-module/checkpoints/
 tensorlogs
 attention-module/scripts/checkpoints/
+*tar.gz

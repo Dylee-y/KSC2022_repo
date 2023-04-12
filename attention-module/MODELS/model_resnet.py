@@ -126,10 +126,15 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2, att_type=att_type)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2, att_type=att_type)
 
-        self.fc = nn.Linear(2048 * block.expansion, num_classes)
-        # self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.fcimgnt = nn.Linear(4608 * block.expansion, num_classes)
+        # fc for imagenette
 
-        init.kaiming_normal_(self.fc.weight)
+        self.fcti = nn.Linear(2048 * block.expansion, num_classes)
+        # fc for ti
+
+        self.fc = nn.Linear(512 * block.expansion, num_classes)
+
+        init.kaiming_normal_(self.fcimgnt.weight)
         for key in self.state_dict():
             if key.split('.')[-1]=="weight":
                 if "conv" in key:
@@ -155,7 +160,11 @@ class ResNet(nn.Module):
         layers.append(block(self.inplanes, planes, stride, downsample, use_cbam=att_type=='CBAM'))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, use_cbam=att_type=='CBAM'))
+            if planes==128 and i==3:
+                layers.append(block(self.inplanes, planes, use_cbam=att_type=='CBAM'))
+            else:
+                layers.append(block(self.inplanes, planes, use_cbam=False))
+
 
         return nn.Sequential(*layers)
 
@@ -185,7 +194,7 @@ class ResNet(nn.Module):
         else:
             x = F.avg_pool2d(x, 4)
         x = x.view(x.size(0), -1)
-        x = self.fc(x)
+        x = self.fcimgnt(x)
         return x
 
 def ResidualNet(network_type, depth, num_classes, att_type):
